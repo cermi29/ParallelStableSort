@@ -69,29 +69,29 @@ namespace parallel_stable_sorting {
    using namespace util_funcs;
 
    namespace block_operations {
-      template <class RandomAccessIterator>
-      inline void MoveBlock(RandomAccessIterator src, RandomAccessIterator dest, std::size_t length) {
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void MoveBlock(RandomAccessIteratorA src, RandomAccessIteratorB dest, std::size_t length) {
          for (std::size_t i = 0; i < length; ++i) dest[i] = std::move(src[i]);
       }
 
-      template <class RandomAccessIterator>
-      inline void SwapBlocks(RandomAccessIterator left_begin, RandomAccessIterator right_begin, std::size_t length) {
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void SwapBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorB right_begin, std::size_t length) {
          for (std::size_t i = 0; i < length; ++i) std::swap(left_begin[i], right_begin[i]);
       }
 
-      template <class RandomAccessIterator>
-      inline void ReverseSwapBlocks(RandomAccessIterator left_begin, RandomAccessIterator right_end, std::size_t length) {
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ReverseSwapBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorB right_end, std::size_t length) {
          for (std::size_t i = 0; i < length; ++i) std::swap(left_begin[i], *--right_end);
       }
 
-      template <class RandomAccessIterator>
-      inline void Reverse(RandomAccessIterator begin, RandomAccessIterator end) {
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void Reverse(RandomAccessIteratorA begin, RandomAccessIteratorB end) {
          while (begin < --end) std::swap(*begin++, *end);
       }
 
-      // rotates block simply by reversing both individual blocks and then reversing them as one whole block
-      template <class RandomAccessIterator>
-      inline void ReversingRotateBlocks(RandomAccessIterator left_begin, RandomAccessIterator left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end) {
+      // rotates block simply by reversing both individual blocks and then reversing them as one whole block     
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ReversingRotateBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorA left_end, RandomAccessIteratorB right_begin, RandomAccessIteratorB right_end) {
          if (left_begin != left_end && right_begin != right_end) {
             Reverse(left_begin, left_end);
             Reverse(right_begin, right_end);
@@ -99,9 +99,9 @@ namespace parallel_stable_sorting {
          }
       }
 
-      // the rotation algorithm using block swaps
-      template <class RandomAccessIterator>
-      inline void ExchangeRotateBlocks(RandomAccessIterator left_begin, std::size_t left_length, RandomAccessIterator right_begin, std::size_t right_length) {
+      // the rotation algorithm using block swaps               
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ExchangeRotateBlocks(RandomAccessIteratorA left_begin, std::size_t left_length, RandomAccessIteratorB right_begin, std::size_t right_length) {
          while (left_length > EXCHANGE_BLOCK_SWAP_BLOCK_LENGTH_MIN && right_length > EXCHANGE_BLOCK_SWAP_BLOCK_LENGTH_MIN) {
             if (left_length < right_length) {
                SwapBlocks(left_begin, right_begin + right_length - left_length, left_length);
@@ -116,11 +116,11 @@ namespace parallel_stable_sorting {
          ReversingRotateBlocks(left_begin, left_begin + left_length, right_begin, right_begin + right_length);
       }
 
-      // used for cross swapping blocks, leaving one of the blocks ordered normally and the other one reversed
-      template <class RandomAccessIterator>
-      inline void HalfReverseSwapBlocks(RandomAccessIterator keep_begin, RandomAccessIterator reverse_begin, std::size_t length) {
+      // used for cross swapping blocks, leaving one of the blocks ordered normally and the other one reversed       
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void HalfReverseSwapBlocks(RandomAccessIteratorA keep_begin, RandomAccessIteratorB reverse_begin, std::size_t length) {
          typename std::remove_reference<decltype(*reverse_begin)>::type tmp;
-         RandomAccessIterator keep_last = keep_begin + length - 1, reverse_last = reverse_begin + length - 1;
+         RandomAccessIteratorA keep_last = keep_begin + length - 1, reverse_last = reverse_begin + length - 1;
          while (keep_begin < keep_last) {
             tmp = std::move(*reverse_begin);
             *reverse_begin = std::move(*keep_begin);
@@ -133,9 +133,9 @@ namespace parallel_stable_sorting {
          if (keep_begin == keep_last) std::swap(*keep_begin, *reverse_begin);
       }
 
-      // the better hybrid algorithm, that reverses one of the blocks while swapping
-      template <class RandomAccessIterator>
-      inline void ReversingExchangeRotateBlocks(RandomAccessIterator left_begin, std::size_t left_length, RandomAccessIterator right_begin, std::size_t right_length) {
+      // the better hybrid algorithm, that reverses one of the blocks while swapping          
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ReversingExchangeRotateBlocks(RandomAccessIteratorA left_begin, std::size_t left_length, RandomAccessIteratorB right_begin, std::size_t right_length) {
          if (left_length > EXCHANGE_BLOCK_SWAP_BLOCK_LENGTH_MIN && right_length > EXCHANGE_BLOCK_SWAP_BLOCK_LENGTH_MIN) for (;;) {
             if (left_length < right_length) {
                right_length -= left_length;
@@ -173,16 +173,16 @@ namespace parallel_stable_sorting {
          }
       }
 
-      // used as a simple interface to choose block rotating algorithm
-      template <class RandomAccessIterator>
-      inline void RotateBlocks(RandomAccessIterator left_begin, RandomAccessIterator left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end) {
+      // used as a simple interface to choose block rotating algorithm          
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void RotateBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorA left_end, RandomAccessIteratorB right_begin, RandomAccessIteratorB right_end) {
          //ReversingRotateBlocks(left_begin, left_end, right_begin, right_end);
          //ExchangeRotateBlocks(left_begin, left_end - left_begin, right_begin, right_end - left_end);
          ReversingExchangeRotateBlocks(left_begin, left_end - left_begin, right_begin, right_end - left_end);
       }
 
-      template <class RandomAccessIterator>
-      inline void ParallelReverse(RandomAccessIterator begin, RandomAccessIterator end, int tasks) {
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ParallelReverse(RandomAccessIteratorA begin, RandomAccessIteratorB end, int tasks) {
          std::size_t length = (end - begin) / 2;
          if (length < tasks) std::reverse(begin, end);
          else {
@@ -198,9 +198,9 @@ namespace parallel_stable_sorting {
          }
       }
 
-      // was used to test parallel reverse during parallel in place merge, it was awfully slow, probably could be better implemented but still kind of limited by the core task dividing
-      template <class RandomAccessIterator>
-      inline void ParallelReversingRotateBlocks(RandomAccessIterator left_begin, RandomAccessIterator left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end, int tasks) {
+      // was used to test parallel reverse during parallel in place merge, it was awfully slow, probably could be better implemented but still kind of limited by the core task dividing           
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ParallelReversingRotateBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorA left_end, RandomAccessIteratorB right_begin, RandomAccessIteratorB right_end, int tasks) {
 #pragma omp task
          ParallelReverse(left_begin, left_end, tasks / 2);
          ParallelReverse(right_begin, right_end, tasks / 2);
@@ -208,9 +208,9 @@ namespace parallel_stable_sorting {
          ParallelReverse(left_begin, right_end, tasks);
       }
 
-      // interface for parallel block rotating, lost its meaning after being found really slow, still exists since then
-      template <class RandomAccessIterator>
-      inline void ParallelRotateBlocks(RandomAccessIterator left_begin, RandomAccessIterator left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end, int tasks) {
+      // interface for parallel block rotating, lost its meaning after being found really slow, still exists since then             
+      template <class RandomAccessIteratorA, class RandomAccessIteratorB>
+      inline void ParallelRotateBlocks(RandomAccessIteratorA left_begin, RandomAccessIteratorA left_end, RandomAccessIteratorB right_begin, RandomAccessIteratorB right_end, int tasks) {
          ParallelReversingRotateBlocks(left_begin, left_end, right_begin, right_end, tasks);
       }
 
@@ -330,8 +330,8 @@ namespace parallel_stable_sorting {
    namespace inplace_merge {
 
       // simple merge using an internal buffer
-      template <class RandomAccessIterator, class Comparator>
-      inline void InternalBufferMerge(Comparator compare, RandomAccessIterator left_begin, RandomAccessIterator left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end, RandomAccessIterator buffer) {
+      template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
+      inline void InternalBufferMerge(Comparator compare, SortedTypePointer left_begin, SortedTypePointer left_end, RandomAccessIterator right_begin, RandomAccessIterator right_end, RandomAccessIterator buffer) {
          if (left_begin < left_end) {
             typename std::remove_reference<decltype(*buffer)>::type tmp = std::move(*buffer);
             if (right_begin < right_end) for (;;) {
@@ -743,8 +743,8 @@ namespace parallel_stable_sorting {
             if (compare(*right_begin, *left_begin)) *buffer++ = std::move(*right_begin++);
             else *buffer++ = std::move(*left_begin++);
          }
-         if (left_begin != buffer) while (left_begin < left_end) *buffer++ = std::move(*left_begin++);
-         if (right_begin != buffer) while (right_begin < right_end) *buffer++ = std::move(*right_begin++);
+         while (left_begin < left_end) *buffer++ = std::move(*left_begin++);
+         while (right_begin < right_end) *buffer++ = std::move(*right_begin++);
       }
 
       // merges from the end
@@ -754,8 +754,8 @@ namespace parallel_stable_sorting {
             if (compare(*right_end, *left_end)) *buffer-- = std::move(*left_end--);
             else *buffer-- = std::move(*right_end--);
          }
-         if (left_end != buffer) while (left_begin < left_end) *buffer-- = std::move(*left_end--);
-         if (right_end != buffer) while (right_begin < right_end) *buffer-- = std::move(*right_end--);
+         while (left_begin < left_end) *buffer-- = std::move(*left_end--);
+         while (right_begin < right_end) *buffer-- = std::move(*right_end--);
       }
 
       // distributes merging into different tasks, evenly divides the longer one of provided parts
@@ -782,8 +782,8 @@ namespace parallel_stable_sorting {
    namespace hybrid_merge {
 
       // changed to use external buffer
-      template <class RandomAccessIterator, class Comparator>
-      inline void ExternalSmallBufferRotationMerge(Comparator compare, RandomAccessIterator left_begin, std::size_t left_length, RandomAccessIterator right_begin, std::size_t right_length, RandomAccessIterator buffer_begin, std::size_t buffer_length) {
+      template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
+      inline void ExternalSmallBufferRotationMerge(Comparator compare, RandomAccessIterator left_begin, std::size_t left_length, RandomAccessIterator right_begin, std::size_t right_length, SortedTypePointer buffer_begin, std::size_t buffer_length) {
          while (buffer_length < left_length) {
             RandomAccessIterator breakpoint = std::lower_bound(right_begin, right_begin + right_length, left_begin[buffer_length - 1], compare);
             std::size_t length = breakpoint - right_begin;
@@ -805,8 +805,8 @@ namespace parallel_stable_sorting {
       }
 
       // changed to use external buffer
-      template <class RandomAccessIterator, class Comparator>
-      inline RandomAccessIterator ExternalMergeBlocks(Comparator compare, RandomAccessIterator s1_begin, RandomAccessIterator s2_begin, RandomAccessIterator left_begin, RandomAccessIterator right_end, RandomAccessIterator buffer_begin, std::size_t buffer_length, std::size_t bds_id, std::size_t block_length, bool enough_buffer) {
+      template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
+      inline RandomAccessIterator ExternalMergeBlocks(Comparator compare, RandomAccessIterator s1_begin, RandomAccessIterator s2_begin, RandomAccessIterator left_begin, RandomAccessIterator right_end, SortedTypePointer buffer_begin, std::size_t buffer_length, std::size_t bds_id, std::size_t block_length, bool enough_buffer) {
          RandomAccessIterator right_begin = left_begin + bds_id * block_length;
          while (bds_id--) {
             if (compare(s1_begin[bds_id], s2_begin[bds_id])) {
@@ -1337,7 +1337,7 @@ void HybridSort(RandomAccessIterator begin, RandomAccessIterator end, Comparator
    }
 }
 
-template <class RandomAccessIterator, class SortedTypePointer>
+template <class RandomAccessIterator>
 void HybridSort(RandomAccessIterator begin, RandomAccessIterator end) {
    HybridSort(begin, end, std::less<>());
 }
