@@ -743,8 +743,8 @@ namespace parallel_stable_sorting {
             if (compare(*right_begin, *left_begin)) *buffer++ = std::move(*right_begin++);
             else *buffer++ = std::move(*left_begin++);
          }
-         while (left_begin < left_end) *buffer++ = std::move(*left_begin++);
-         while (right_begin < right_end) *buffer++ = std::move(*right_begin++);
+         if (&*left_begin != &*buffer) while (left_begin < left_end) *buffer++ = std::move(*left_begin++);
+         if (&*right_begin != &*buffer) while (right_begin < right_end) *buffer++ = std::move(*right_begin++);
       }
 
       // merges from the end
@@ -754,8 +754,8 @@ namespace parallel_stable_sorting {
             if (compare(*right_end, *left_end)) *buffer-- = std::move(*left_end--);
             else *buffer-- = std::move(*right_end--);
          }
-         while (left_begin < left_end) *buffer-- = std::move(*left_end--);
-         while (right_begin < right_end) *buffer-- = std::move(*right_end--);
+         if (&*left_end != &*buffer) while (left_begin < left_end) *buffer-- = std::move(*left_end--);
+         if (&*right_end != &*buffer) while (right_begin < right_end) *buffer-- = std::move(*right_end--);
       }
 
       // distributes merging into different tasks, evenly divides the longer one of provided parts
@@ -1123,12 +1123,15 @@ namespace parallel_stable_sorting {
       }
    }
 
-   template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
-   inline void OutPlaceMergeSort(Comparator compare, RandomAccessIterator begin, RandomAccessIterator end, SortedTypePointer buffer, int threads = omp_get_max_threads()) {
+   template <class RandomAccessIterator, class Comparator>
+   inline void OutPlaceMergeSort(Comparator compare, RandomAccessIterator begin, RandomAccessIterator end, int threads) {
+      typedef typename std::remove_reference<decltype(*begin)>::type SortedType;
       std::size_t length = end - begin;
+      SortedType* buffer = new SortedType[length];
 #pragma omp parallel num_threads(threads)
 #pragma omp master
       ParallelOutPlaceMergeSort(compare, begin, buffer, length, upper_power_of_two(threads * K_THREADS_TASK));
+      delete[] buffer;
    }
 
    template <class RandomAccessIterator, class Comparator>
@@ -1242,11 +1245,11 @@ namespace parallel_stable_sorting {
    }
 
    // decides what to do based on provided buffer
-   template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
-   inline void HybridSort(Comparator compare, RandomAccessIterator begin, RandomAccessIterator end, SortedTypePointer external_buffer_begin, std::size_t external_buffer_length, int threads = omp_get_max_threads()) {
+   template <class RandomAccessIterator, class Comparator>
+   inline void HybridSort(Comparator compare, RandomAccessIterator begin, RandomAccessIterator end, std::size_t external_buffer_length, int threads) {
       std::size_t max_length;
       if (external_buffer_length >= (std::size_t)(end - begin)) {
-         OutPlaceMergeSort(compare, begin, end, external_buffer_begin, threads);
+         OutPlaceMergeSort(compare, begin, end, threads);
       }
       else if (external_buffer_length < (max_length = (std::size_t)sqrt(2 * (end - begin) / upper_power_of_two(threads * INPLACE_K_THREADS_TASK)))) {
          InPlaceMergeSort(compare, begin, end, threads);
@@ -1259,9 +1262,14 @@ namespace parallel_stable_sorting {
             buffer_per_thread = external_buffer_length / threads_with_buffer;
          }
 
+         typedef typename std::remove_reference<decltype(*begin)>::type SortedType;
+         SortedType* external_buffer_begin = new SortedType[threads_with_buffer * buffer_per_thread];
+
 #pragma omp parallel num_threads(threads)
 #pragma omp master  
          ParallelHybridSort(compare, begin, end - begin, external_buffer_begin, buffer_per_thread, threads_with_buffer, upper_power_of_two(threads * INPLACE_K_THREADS_TASK));
+
+         delete[] external_buffer_begin;
       }
    }
    namespace serial {
@@ -1324,28 +1332,18 @@ namespace parallel_stable_sorting {
 
 template <class RandomAccessIterator, class Comparator>
 void HybridSort(RandomAccessIterator begin, RandomAccessIterator end, Comparator compare, std::size_t buffer_length = -1LL, int threads = omp_get_max_threads()) {
+   if (buffer_length > end - begin) buffer_length = end - begin;
    if (threads == 1) {
       parallel_stable_sorting::serial::HybridSort(compare, begin, end, buffer_length);
    }
    else {
-      typedef typename std::remove_reference<decltype(*begin)>::type SortedType;
-      SortedType* buffer;
-      if (buffer_length > (std::size_t)(end - begin)) buffer_length = (std::size_t)(end - begin);
-      buffer = new SortedType[buffer_length];
-      parallel_stable_sorting::HybridSort(compare, begin, end, buffer, buffer_length, threads);
-      delete[] buffer;
+      parallel_stable_sorting::HybridSort(compare, begin, end, buffer_length, threads);
    }
 }
 
 template <class RandomAccessIterator>
 void HybridSort(RandomAccessIterator begin, RandomAccessIterator end) {
    HybridSort(begin, end, std::less<>());
-}
-
-template <class RandomAccessIterator, class SortedTypePointer, class Comparator>
-void HybridSort(RandomAccessIterator begin, RandomAccessIterator end, Comparator compare, std::size_t buffer_length = -1LL, int threads = omp_get_max_threads(), SortedTypePointer buffer = nullptr) {
-   if (threads == 1 && buffer_length >= (std::size_t)(end - begin + 1) / 2) parallel_stable_sorting::TopOutPlaceMergeSort(compare, begin, buffer, end - begin);
-   else parallel_stable_sorting::HybridSort(compare, begin, end, buffer, buffer_length, threads);
 }
 
 #endif  // HYBRIDSORT_H
