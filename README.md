@@ -43,8 +43,10 @@ In-place mergesort parallel speedup:
 std::vector<int> vec;
 …
 HybridSort(vec.begin(), vec.end()); // by default sorts with extra buffer of elements with length equal to end - begin
-HybridSort(vec.begin(), vec.end(), 0); // sorts with no extra memory buffer
-HybridSort(vec.begin(), vec.end(), 1000, 4); // sorts with a buffer of 1000 elements using 4 threads
+HybridSort(vec.begin(), vec.end(), compare_func); // sorts while using compare_func to compare elements
+HybridSort(vec.begin(), vec.end(), std::less<>(), 0); // sorts with no extra memory buffer
+HybridSort(vec.begin(), vec.end(), std::less<>(), -1LL); // sorts with maximum extra memory buffer
+HybridSort(vec.begin(), vec.end(), std::less<>(), 1000, 4); // sorts with a buffer of 1000 elements using 4 threads
 ```
 
 ## References
