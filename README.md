@@ -8,7 +8,7 @@ Single thread performance compared with std::stable_sort from STL:
 <table>
   <tr>
     <th>Algorithm:</th>
-    <td>Classic mergesort</td>
+    <td>Out-place mergesort</td>
     <td>std::stable_sort</td>
     <td>In-place mergesort</td>
   </tr>
